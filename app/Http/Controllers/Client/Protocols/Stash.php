@@ -59,21 +59,23 @@ class Stash
 
         $config['proxies'] = array_merge($config['proxies'] ? $config['proxies'] : [], $proxy);
         foreach ($config['proxy-groups'] as $k => $v) {
-            if (!is_array($config['proxy-groups'][$k]['proxies'])) continue;
-            $isFilter = false;
-            foreach ($config['proxy-groups'][$k]['proxies'] as $src) {
-                foreach ($proxies as $dst) {
-                    if (!$this->isRegex($src)) continue;
-                    $isFilter = true;
-                    $config['proxy-groups'][$k]['proxies'] = array_values(array_diff($config['proxy-groups'][$k]['proxies'], [$src]));
-                    if ($this->isMatch($src, $dst)) {
-                        array_push($config['proxy-groups'][$k]['proxies'], $dst);
+            if (!is_array($config['proxy-groups'][$k]['proxies'])) $config['proxy-groups'][$k]['proxies'] = [];
+            $updatedProxies = [];
+            foreach ($config['proxy-groups'][$k]['proxies'] as $index => $src) {
+                if ($this->isRegex($src)) {
+                    foreach ($proxies as $dst) {
+                        if ($this->isMatch($src, $dst)) {
+                            $updatedProxies[] = $dst;
+                        }
                     }
+                } else {
+                    $updatedProxies[] = $src;
                 }
-                if ($isFilter) continue;
             }
-            if ($isFilter) continue;
-            $config['proxy-groups'][$k]['proxies'] = array_merge($config['proxy-groups'][$k]['proxies'], $proxies);
+            if (empty($updatedProxies) && !empty($config['proxy-groups'][$k]['proxies'])) {
+                $updatedProxies = array_merge($updatedProxies, $proxies);
+            }
+            $config['proxy-groups'][$k]['proxies'] = $updatedProxies;
         }
         $config['proxy-groups'] = array_filter($config['proxy-groups'], function($group) {
             return $group['proxies'];
